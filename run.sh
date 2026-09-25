@@ -11,7 +11,7 @@ do
   do
     FILE="$line"
 
-    # logo seçimi
+    
     if [[ "$FILE" == *"reklam"* ]]; then
       LOGO="assets/reklam.png"
     else
