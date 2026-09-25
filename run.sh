@@ -2,7 +2,7 @@
 
 mkdir -p hls
 
-# HTTP server (Render için)
+
 python3 -m http.server 10000 &
 
 while true
