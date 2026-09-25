@@ -2,49 +2,35 @@
 
 mkdir -p hls
 
-
 python3 -m http.server 10000 &
 
-
-INPUTS=""
-COUNT=0
-
-while read line
+while true
 do
-  FILE=$(echo $line | cut -d"'" -f2)
-  INPUTS="$INPUTS -re -i $FILE"
-  COUNT=$((COUNT+1))
-done < playlist.txt
+  while read FILE
+  do
 
+    if [[ "$FILE" == *reklam* ]]; then
+      LOGO="assets/reklam.png"
+    else
+      LOGO="assets/yayin.png"
+    fi
 
-FILTER=""
-CONCAT_INPUT=""
+    ffmpeg -y -re -i "$FILE" -i "$LOGO" \
+    -filter_complex "
+    scale=960:540[vid];
+    [1:v]scale=960:540[logo];
+    [vid][logo]overlay=0:0:format=auto[outv]
+    " \
+    -map "[outv]" -map 0:a? \
+    -c:v libx264 -preset veryfast -tune zerolatency \
+    -b:v 700k -maxrate 700k -bufsize 1000k \
+    -c:a aac -b:a 96k \
+    -f hls \
+    -hls_time 2 \
+    -hls_list_size 6 \
+    -hls_flags delete_segments \
+    hls/stream.m3u8
 
-for ((i=0;i<$COUNT;i++))
-do
-  FILE=$(sed -n "$((i+1))p" playlist.txt | cut -d"'" -f2)
+  done < playlist.txt
 
-  if [[ "$FILE" == *"reklam"* ]]; then
-    FILTER="$FILTER [$i:v]scale=960:540[v$i]; [v$i][${COUNT}:v]overlay=0:0[v${i}o];"
-  else
-    FILTER="$FILTER [$i:v]scale=960:540[v$i]; [v$i][$(($COUNT+1)):v]overlay=0:0[v${i}o];"
-  fi
-
-  CONCAT_INPUT="$CONCAT_INPUT [v${i}o][$i:a]"
 done
-
-
-ffmpeg $INPUTS -i assets/reklam.png -i assets/yayin.png \
--filter_complex "
-$FILTER
-$CONCAT_INPUT concat=n=$COUNT:v=1:a=1[outv][outa]
-" \
--map "[outv]" -map "[outa]" \
--c:v libx264 -preset veryfast -tune zerolatency \
--b:v 800k -maxrate 800k -bufsize 1200k \
--c:a aac -b:a 96k \
--f hls \
--hls_time 2 \
--hls_list_size 6 \
--hls_flags delete_segments+append_list \
-hls/stream.m3u8
