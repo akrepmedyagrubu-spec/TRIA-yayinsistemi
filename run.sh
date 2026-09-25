@@ -15,22 +15,21 @@ do
       LOGO="assets/yayin.png"
     fi
 
-    ffmpeg -y -re -i "$FILE" -i "$LOGO" \
+    ffmpeg -re -i "$FILE" -i "$LOGO" \
     -filter_complex "
-    scale=960:540[vid];
+    [0:v]scale=960:540[v];
     [1:v]scale=960:540[logo];
-    [vid][logo]overlay=0:0:format=auto[outv]
+    [v][logo]overlay=0:0:format=auto
     " \
-    -map "[outv]" -map 0:a? \
+    -map "[v]" -map 0:a? \
     -c:v libx264 -preset veryfast -tune zerolatency \
-    -b:v 700k -maxrate 700k -bufsize 1000k \
-    -c:a aac -b:a 96k \
+    -r 20 \
+    -b:v 650k -maxrate 650k -bufsize 900k \
     -f hls \
     -hls_time 2 \
     -hls_list_size 6 \
-    -hls_flags delete_segments \
+    -hls_flags delete_segments+append_list \
     hls/stream.m3u8
 
   done < playlist.txt
-
 done
